@@ -3,20 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Message Board</title>
+    <title>User Submission Form</title>
 </head>
 <body>
-    <h1>Global Message Board</h1>
-    <form action="/post_message" method="post">
-        <label for="message">Enter your message:</label>
-        <input type="text" id="message" name="message" required>
-        <button type="submit">Send Message</button>
+    <h1>User Submission Form</h1>
+    <form id="submissionForm">
+        <label for="timestamp">Timestamp:</label>
+        <input type="hidden" id="timestamp" name="timestamp" value=""><br><br>
+        
+        <label for="levelNumber">Level Number:</label>
+        <input type="hidden" id="levelNumber" name="levelNumber" value=""><br><br>
+        
+        <button type="submit">Submit</button>
     </form>
-    <h2>Messages:</h2>
-    <ul>
-        {% for message in messages %}
-            <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
+
+    <div id="message"></div>
+
+    <script>
+        // Function to generate a random level number
+        function getRandomLevel() {
+            return Math.floor(Math.random() * 3) + 1; // Generates a random number between 1 and 3
+        }
+
+        // Function to get the current timestamp in ISO format
+        function getCurrentTimestamp() {
+            return new Date().toISOString().slice(0, 19).replace('T', ' '); // Formats current time as YYYY-MM-DD HH:MM:SS
+        }
+
+        document.getElementById('submissionForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // Set the current time and random level number as values in the form
+            document.getElementById('timestamp').value = getCurrentTimestamp();
+            document.getElementById('levelNumber').value = getRandomLevel();
+            
+            var formData = new FormData(this);
+            
+            fetch('/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('message').textContent = data.message;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('message').textContent = 'An error occurred. Please try again later.';
+            });
+        });
+    </script>
 </body>
 </html>
