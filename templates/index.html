@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Submission Form</title>
+    <title>Unity Data Analysis</title>
+    <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <h1>User Submission Form</h1>
+    <h1>User Submission Form and Interactive Plot</h1>
     <form id="submissionForm">
         <label for="timestamp">Timestamp:</label>
         <input type="hidden" id="timestamp" name="timestamp" value=""><br><br>
@@ -19,6 +20,9 @@
 
     <div id="message"></div>
 
+    <h1>Path Positions Plot</title>
+    <img src="{{ url_for('static', filename='path_positions_plot.png') }}" alt="Path Positions Plot">
+    
     <script>
         // Function to generate a random level number
         function getRandomLevel() {
@@ -52,6 +56,6 @@
                 document.getElementById('message').textContent = 'An error occurred. Please try again later.';
             });
         });
-    </script>
+</script>
 </body>
 </html>
