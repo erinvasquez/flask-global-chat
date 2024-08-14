@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select ID to Plot XZ Movement</title>
+</head>
+<body>
+    <h1>Select ID to Plot XZ Movement</h1>
+    <form action="{{ url_for('plot_xz_movement') }}" method="post">
+        <label for="id">Select ID:</label>
+        <select name="id" id="id">
+            {% for id in ids %}
+            <option value="{{ id }}">{{ id }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Plot</button>
+    </form>
+
+    {% if image %}
+    <h2>Plot for ID {{ selected_id }}</h2>
+    <img src="{{ url_for('static', filename=image) }}" alt="XZ Movement Plot">
+    {% endif %}
+
+    {% if heatmap %}
+    <h2>Heatmap of All Entries</h2>
+    <img src="{{ url_for('static', filename=heatmap) }}" alt="Heatmap">
+    {% endif %}
+</body>
+</html>

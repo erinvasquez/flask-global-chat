@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path Position Time Lists</title>
+</head>
+<body>
+    <h1>Path Position Time Lists</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Path Positions</th>
+                <th>Path Times</th>
+                <th>Created At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in path_position_time_lists %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.path_positions }}</td>
+                <td>{{ item.path_times }}</td>
+                <td>{{ item.created_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
