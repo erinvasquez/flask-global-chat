@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='scripts.js') }}" defer></script>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Dashboard</h1>
+
+    <!-- Dropdown for selecting IDs -->
+    <form id="selectionForm" action="/plot_xz_movement" method="POST">
+        <label for="id">Select an ID:</label>
+        <select id="id" name="id">
+            {% for id in ids %}
+                <option value="{{ id }}">{{ id }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Plot</button>
+    </form>
+
+    <!-- Placeholder for the XZ plot -->
+    <h2>XZ Movement Plot</h2>
+    <img id="xzPlot" src="{{ url_for('static', filename='plots/plot_1.png') }}" alt="XZ Movement Plot" />
+
+    <!-- Placeholder for the heatmap -->
+    <h2>Heatmap</h2>
+    <img id="heatmap" src="{{ url_for('static', filename='plots/heatmap.png') }}" alt="Heatmap" />
+
+    <!-- Hidden script to pass server-side data to JavaScript -->
+    <script id="data" type="application/json">
+        {
+            "ids": {{ ids|tojson }},
+            "selected_id": "{{ selected_id | default('1') }}"
+        }
+    </script>
+</body>
+</html>

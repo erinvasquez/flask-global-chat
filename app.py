@@ -479,6 +479,7 @@ def get_statistics():
         return jsonify({'error': 'Internal server error'}), 500
 
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -497,16 +498,18 @@ def dashboard():
             app.logger.error("No IDs found in the database")
             ids = []
 
-        return render_template('dashboard.html', ids=[id[0] for id in ids])
+        # Include the selected_id in the context if available
+        selected_id = request.args.get('id', default='', type=str)
+
+        return render_template('dashboard.html', ids=[id[0] for id in ids], selected_id=selected_id)
+
     except Exception as e:
         app.logger.error(f"Error loading dashboard: {str(e)}")
         app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
 
+
 if __name__ == '__main__':
     fullchain_path = '/etc/letsencrypt/live/silenttableshow.com/fullchain.pem'
     privkey_path = '/etc/letsencrypt/live/silenttableshow.com/privkey.pem'
-
-    #app.run(host='0.0.0.0', port=8080, ssl_context=(fullchain_path, privkey_path), debug=False)
-    #app.run(host='0.0.0.0', port=8080, debug=False)
     app.run()
