@@ -421,10 +421,87 @@ def generate_and_verify_unique_code(table):
         code = generate_unique_code()
     return code
 
+
+# Statistics
+
+@app.route('/get_statistics', methods=['GET'])
+def get_statistics():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # SQL query to extract and calculate statistics
+        query = '''
+            WITH x_values AS (
+                SELECT
+                    jsonb_array_elements_text(path_positions->'x')::numeric AS x_value
+                FROM path_position_time_lists
+            ),
+            z_values AS (
+                SELECT
+                    jsonb_array_elements_text(path_positions->'z')::numeric AS z_value
+                FROM path_position_time_lists
+            )
+            SELECT
+                COUNT(*) AS total_entries,
+                AVG(x_value) AS avg_x,
+                AVG(z_value) AS avg_z,
+                MIN(x_value) AS min_x,
+                MAX(x_value) AS max_x,
+                MIN(z_value) AS min_z,
+                MAX(z_value) AS max_z
+            FROM x_values, z_values
+        '''
+        
+        cursor.execute(query)
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if result:
+            response = {
+                'stats': {
+                    'total_entries': result[0],
+                    'avg_x': result[1],
+                    'avg_z': result[2],
+                    'min_x': result[3],
+                    'max_x': result[4],
+                    'min_z': result[5],
+                    'max_z': result[6]
+                }
+            }
+            return jsonify(response)
+        else:
+            return jsonify({'error': 'No statistics available'}), 404
+    except Exception as e:
+        logging.error(f"Error fetching statistics: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/dashboard')
+def dashboard():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM path_position_time_lists")
+        ids = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        if not ids:
+            app.logger.error("No IDs found in the database")
+            ids = []
+
+        return render_template('dashboard.html', ids=[id[0] for id in ids])
+    except Exception as e:
+        app.logger.error(f"Error loading dashboard: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     fullchain_path = '/etc/letsencrypt/live/silenttableshow.com/fullchain.pem'
