@@ -35,24 +35,6 @@ handler = logging.FileHandler('logs/app.log')
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
 
-def get_data(start_time, end_time):
-    # Connect to your PostgreSQL database
-    conn = get_db_connection() #psycopg2.connect("dbname=DB_NAME user=DB_USER password=DB_PASSWORD host=DB_HOST")
-    cur = conn.cursor()
-
-    # Query the data
-    query = '''
-    SELECT * FROM path_position_time_lists
-    WHERE created_at >= %s AND created_at <= %s
-    '''
-    cur.execute(query, (start_time, end_time))
-    rows = cur.fetchall()
-    columns = [desc[0] for desc in cur.description]
-
-    # Convert the data to a pandas DataFrame
-    df = pd.DataFrame(rows, columns=columns)
-    return df
-
 # Path Position Time List endpoints
 @app.route('/receive_positiontimelist', methods=['POST'])
 def receive_positiontimelist():
@@ -165,52 +147,6 @@ def get_positiontimelist(id):
         logging.error(f"Error fetching path position time list: {str(e)}")
         logging.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
-
-
-
-# Data endpoints
-@app.route('/view_data', methods=['GET'])
-def view_data():
-    return render_template('view_data.html')
-
-@app.route('/plot_data')
-def plot_data():
-    start_time = request.args.get('start_time')
-    end_time = request.args.get('end_time')
-    
-    try:
-        data = query_data(start_time, end_time)
-        return jsonify(data)
-    except Exception as e:
-        app.logger.error(f"Error retrieving plot data: {e}")
-        return jsonify({"error": "Internal Server Error"}), 500
-
-@app.route('/query_data', methods=['POST'])
-def query_data():
-    #try:
-    # Get the start and end time from the request
-    data = request.get_json()
-    start_time = data.get('start_time')
-    end_time = data.get('end_time')
-
-    # Fetch data using get_data function
-    df = get_data(start_time, end_time)
-
-    # Convert the DataFrame to JSON
-    result = df.to_json(orient='records')
-
-    return jsonify(result)
-    #except Exception as e:
-    #    app.logger.error(f"Error retrieving plot data: {e}")
-    #    return jsonify({"error": str(e)}), 500
-
-@app.route('/view_data_entry')
-def view_data_entry():
-    return render_template('view_data_entry.html')
-
-
-
-
 
 
 @app.route('/plot_xz_movement', methods=['POST'])
@@ -430,53 +366,40 @@ def get_statistics():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # SQL query to extract and calculate statistics
-        query = '''
-            WITH x_values AS (
-                SELECT
-                    jsonb_array_elements_text(path_positions->'x')::numeric AS x_value
-                FROM path_position_time_lists
-            ),
-            z_values AS (
-                SELECT
-                    jsonb_array_elements_text(path_positions->'z')::numeric AS z_value
-                FROM path_position_time_lists
-            )
-            SELECT
-                COUNT(*) AS total_entries,
-                AVG(x_value) AS avg_x,
-                AVG(z_value) AS avg_z,
-                MIN(x_value) AS min_x,
-                MAX(x_value) AS max_x,
-                MIN(z_value) AS min_z,
-                MAX(z_value) AS max_z
-            FROM x_values, z_values
-        '''
-        
-        cursor.execute(query)
-        result = cursor.fetchone()
-        cursor.close()
-        conn.close()
+        # Query to get all X and Z positions
+        cursor.execute('''
+            SELECT path_positions
+            FROM path_position_time_lists
+        ''')
+        rows = cursor.fetchall()
 
-        if result:
-            response = {
-                'stats': {
-                    'total_entries': result[0],
-                    'avg_x': result[1],
-                    'avg_z': result[2],
-                    'min_x': result[3],
-                    'max_x': result[4],
-                    'min_z': result[5],
-                    'max_z': result[6]
-                }
-            }
-            return jsonify(response)
-        else:
-            return jsonify({'error': 'No statistics available'}), 404
+        x_positions = []
+        z_positions = []
+
+        # Extract X and Z positions from the path_positions
+        for row in rows:
+            positions = row[0]  # Assuming path_positions is stored as a list in the DB
+            for pos in positions:
+                x_positions.append(pos['x'])
+                z_positions.append(pos['z'])
+
+        # Calculate statistics
+        x_stats = {
+            'min': min(x_positions),
+            'max': max(x_positions),
+            'avg': sum(x_positions) / len(x_positions) if x_positions else 0
+        }
+
+        z_stats = {
+            'min': min(z_positions),
+            'max': max(z_positions),
+            'avg': sum(z_positions) / len(z_positions) if z_positions else 0
+        }
+
+        return jsonify({'x_stats': x_stats, 'z_stats': z_stats})
     except Exception as e:
-        logging.error(f"Error fetching statistics: {str(e)}")
         logging.error(traceback.format_exc())
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 

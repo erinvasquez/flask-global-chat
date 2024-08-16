@@ -8,33 +8,51 @@
     <title>Dashboard</title>
 </head>
 <body>
-    <h1>Dashboard</h1>
+    <div class="container">
+        <header>
+            <h1>Dashboard</h1>
+        </header>
 
-    <!-- Dropdown for selecting IDs -->
-    <form id="selectionForm" action="/plot_xz_movement" method="POST">
-        <label for="id">Select an ID:</label>
-        <select id="id" name="id">
-            {% for id in ids %}
-                <option value="{{ id }}">{{ id }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Plot</button>
-    </form>
+        <main>
+            <!-- Dropdown for selecting IDs -->
+            <form id="selectionForm" action="/plot_xz_movement" method="POST">
+                <label for="id">Select an ID:</label>
+                <select id="id" name="id">
+                    {% for id in ids %}
+                        <option value="{{ id }}">{{ id }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Plot</button>
+            </form>
 
-    <!-- Placeholder for the XZ plot -->
-    <h2>XZ Movement Plot</h2>
-    <img id="xzPlot" src="{{ url_for('static', filename='plots/plot_1.png') }}" alt="XZ Movement Plot" />
+            <div class="grid">
+                <!-- Placeholder for the XZ plot -->
+                <div class="plot-container">
+                    <h2>XZ Movement Plot</h2>
+                    <img id="xzPlot" src="{{ url_for('static', filename='plots/plot_1.png') }}" alt="XZ Movement Plot" />
+                </div>
 
-    <!-- Placeholder for the heatmap -->
-    <h2>Heatmap</h2>
-    <img id="heatmap" src="{{ url_for('static', filename='plots/heatmap.png') }}" alt="Heatmap" />
+                <!-- Placeholder for the heatmap -->
+                <div class="plot-container">
+                    <h2>Heatmap</h2>
+                    <img id="heatmap" src="{{ url_for('static', filename='plots/heatmap.png') }}" alt="Heatmap" />
+                </div>
 
-    <!-- Hidden script to pass server-side data to JavaScript -->
-    <script id="data" type="application/json">
-        {
-            "ids": {{ ids|tojson }},
-            "selected_id": "{{ selected_id | default('1') }}"
-        }
-    </script>
+                <!-- Placeholder for leaderboard entries -->
+                <div class="stats-container">
+                    <h2>Leaderboard Entries</h2>
+                    <div id="leaderboard">
+                    </div>
+                </div>
+
+                <!-- Placeholder for statistics -->
+                <div class="stats-container">
+                    <h2>Statistics</h2>
+                    <div id="stats">
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 </body>
 </html>
