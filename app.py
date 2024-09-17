@@ -419,15 +419,15 @@ def get_statistics():
         # Calculate statistics
         def calc_stats(positions):
             if not positions:
-                return {'min': None, 'max': none, 'avg': None}
+                return {'min': None, 'max': None, 'avg': None}
             return {
                 'min' min(positions),
                 'max': max(positions),
                 'avg': sum(positions) / len(positions)
             }
 
-        x_stats = calculate_stats(x_positions)
-        z_stats = calculate_stats(z_positions)
+        x_stats = calc_stats(x_positions)
+        z_stats = calc_stats(z_positions)
 
         return jsonify({'x_stats': x_stats, 'z_stats': z_stats})
     except Exception as e:
