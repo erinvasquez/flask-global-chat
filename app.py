@@ -53,10 +53,10 @@ def receive_positiontimelist():
         if not isinstance(data, dict):
             return jsonify({"error": "Invalid data format"}), 400
         #
-        positions = data.get('simplePositions')
+        simple_positions = data.get('simplePositions')
         times = data.get('times')
-        is_turn = data.get('isTurn')
-        turn_angle = data.get('turnAngle')
+        is_turn = data.get('isTurn', None) # Provide default value if not present
+        turn_angle = data.get('turnAngle', None) # Provide default value if not present
         unique_code = data.get('uniqueCode')
 
         if not all([positions, times, unique_code]):
@@ -64,33 +64,14 @@ def receive_positiontimelist():
 
         # Prepare path_data JSONB object
         path_data = {
-            "positions": positions,
+            "positions": simple_positions,
             "times": times,
             "isTurn": is_turn,
             "turnAngle": turn_angle
         }
 
-        #positions = data.get('simplePositions')
-        #times = data.get('times')
-        #path_data = data.get('path_data')
-        #unique_code = data.get('uniqueCode')
-
-        # Check if data is present
-        #if path_data is None or unique_code is None:
-        #    raise ValueError("Missing 'path_data' or 'uniqueCode' in the request")
-
-        # Extract positions and times
-        #positions = [item.get('position') for item in path_data]
-        #times = [item.get('time') for item in path_data]
-
-        # Log Data
-        #app.logger.info(f"Received path data: unique_code={unique_code}")
-
-        # Log data
-        #print(f"Received path data: unique_code={unique_code}")
-
         # Insert the data into the database
-        cursor.execute("INSERT INTO path_position_time_lists (path_data, unique_code) VALUES (%s, %s)",
+        cursor.execute("INSERT INTO movement_data (path_data, unique_code) VALUES (%s, %s)",
                         (json.dumps(path_data),
                         unique_code))
         conn.commit()
@@ -122,32 +103,23 @@ def get_path_position_time_lists():
         cursor.execute("SELECT * FROM path_position_time_lists")
         rows = cursor.fetchall()
 
-        # Print raw data for debugging
-        #print("Raw rows from database:", rows)
-
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
-            #path_pos_time_list = {
-            #    "id": row[0],
-            #    "path_positions": row[1],
-            #    "path_times": row[2],
-            #    "created_at": row[3].isoformat() # Convert tiemstamp to ISO format string
-            #}
-            path_data = json.loads(row[1]) # Deserialize path_positions
-            path_times = json.loads(row[2]) # Deserialize path_times
+            path_data = json.loads(row[1]) # Deserialize path_data
+            unique_code = row[2] # Assuming unique_code in in the third column
+            created_at = row[3].isoformat()
 
-            # Combine positions and times into path_data
-            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_data, path_times)]
-            path_pos_time_list = {
+            movement_data = {
                "id": row[0],
-               "path_data": combined_data,
-               "created_at": row[3].isoformat()
+               "path_data": path_data,
+               "unique_code": unique_code,
+               "created_at": created_at
             }
-            lists.append(path_pos_time_list)
+            lists.append(movement_data)
 
 
-        return jsonify({"path_position_time_lists": lists}), 200
+        return jsonify({"movement_data": lists}), 200
 
     except Exception as e:
         error_message = f"Error: {str(e)}\n{traceback.format_exc()}"
@@ -169,8 +141,8 @@ def get_positiontimelist(id):
 
         # Query to extract the entire entry for the specific ID
         query = """
-        SELECT id, path_positions, path_times
-        FROM path_position_time_lists
+        SELECT  path_data, unique_code, created_at
+        FROM movement_data
         WHERE id = %s
         """
 
@@ -179,21 +151,20 @@ def get_positiontimelist(id):
         result = cursor.fetchone()
 
         if result:
-            path_positions = json.loads(result[1])  # Deserialize path_positions
-            path_times = json.loads(result[2])      # Deserialize path_times
-
-            # Combine positions and times into path_data
-            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_positions, path_times)]
+            path_data = json.loads(result[0])
+            unique_code = result[1]
+            created_at = result[2].isoformat() if result[2] else None
 
             response = {
-                'id': result[0],
-                'path_data': combined_data
+                'path_data': path_data,
+                'unique_code': unique_code,
+                'created_at': created_at
             }
             return jsonify(response)
         else:
             return jsonify({'error': 'Entry not found'}), 404
     except Exception as e:
-        app.logger.error(f"Error fetching path position time list: {str(e)}")
+        app.logger.error(f"Error fetching movement data: {str(e)}")
         app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -208,13 +179,17 @@ def get_positiontimelist(id):
 @app.route('/plot_xz_movement', methods=['POST'])
 def plot_xz_movement():
     id = request.form['id']
+
+    if not id:
+        return jsonify({'error': 'ID not prvoided'}), 400
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         query = """
-        SELECT path_positions, path_times
-        FROM path_position_time_lists
+        SELECT path_data
+        FROM movement_data
         WHERE id = %s
         """
 
@@ -224,16 +199,16 @@ def plot_xz_movement():
         conn.close()
 
         if result:
-            path_positions = result[0]
-            path_times = result[1]
+            path_data = json.loads(result[0])
+            simple_positions = path_data.get('positions', [])
 
             # Verify data type and structure
-            if not isinstance(path_positions, list) or not all(isinstance(pos, dict) and 'x' in pos and 'z' in pos for pos in path_positions):
-                return jsonify({'error': 'Invalid format for path_positions'}), 500
+            if not isinstance(simple_positions, list) or not all(isinstance(pos, dict) and 'x' in pos and 'z' in pos for pos in simple_positions):
+                return jsonify({'error': 'Invalid format for positions in path_data'}), 500
 
             # Extract x, z positions
-            x_positions = [pos['x'] for pos in path_positions]
-            z_positions = [pos['z'] for pos in path_positions]
+            x_positions = [pos['x'] for pos in simple_positions]
+            z_positions = [pos['z'] for pos in simple_positions]
 
             # Create the XZ plot
             plt.figure(figsize=(10, 6))
@@ -259,7 +234,7 @@ def plot_xz_movement():
             # Generate heatmap of all entries
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT path_positions FROM path_position_time_lists")
+            cursor.execute("SELECT path_data FROM movement_data")
             all_path_positions = cursor.fetchall()
             cursor.close()
             conn.close()
@@ -267,11 +242,12 @@ def plot_xz_movement():
             # Flatten and prepare data for heatmap
             all_x_positions = []
             all_z_positions = []
-            for positions in all_path_positions:
-                path_positions = positions[0]
-                if isinstance(path_positions, list):
-                    all_x_positions.extend(pos['x'] for pos in path_positions if 'x' in pos)
-                    all_z_positions.extend(pos['z'] for pos in path_positions if 'z' in pos)
+            for positions in all_path_data:
+                path_data = json.loads(data[0])
+                positions = path_data.get('positions', [])
+                if isinstance(positions, list):
+                    all_x_positions.extend(pos['x'] for pos in positions if 'x' in pos)
+                    all_z_positions.extend(pos['z'] for pos in positions if 'z' in pos)
 
             # Create heatmap plot
             plt.figure(figsize=(10, 6))
@@ -292,7 +268,7 @@ def plot_xz_movement():
             # Fetch all IDs for the dropdown
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM path_position_time_lists")
+            cursor.execute("SELECT id FROM movement_data")
             ids = cursor.fetchall()
             cursor.close()
             conn.close()
@@ -312,7 +288,7 @@ def plot_xz_movement_ui():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM path_position_time_lists")
+        cursor.execute("SELECT id FROM movement_data")
         ids = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -424,8 +400,8 @@ def get_statistics():
 
         # Query to get all X and Z positions
         cursor.execute('''
-            SELECT path_positions
-            FROM path_position_time_lists
+            SELECT path_data
+            FROM movement_data
         ''')
         rows = cursor.fetchall()
 
@@ -434,28 +410,34 @@ def get_statistics():
 
         # Extract X and Z positions from the path_positions
         for row in rows:
-            positions = row[0]  # Assuming path_positions is stored as a list in the DB
+            path_data = json.loads(row[0])
+            positions = path_data.get('positions', [])
             for pos in positions:
                 x_positions.append(pos['x'])
                 z_positions.append(pos['z'])
 
         # Calculate statistics
-        x_stats = {
-            'min': min(x_positions),
-            'max': max(x_positions),
-            'avg': sum(x_positions) / len(x_positions) if x_positions else 0
-        }
+        def calc_stats(positions):
+            if not positions:
+                return {'min': None, 'max': none, 'avg': None}
+            return {
+                'min' min(positions),
+                'max': max(positions),
+                'avg': sum(positions) / len(positions)
+            }
 
-        z_stats = {
-            'min': min(z_positions),
-            'max': max(z_positions),
-            'avg': sum(z_positions) / len(z_positions) if z_positions else 0
-        }
+        x_stats = calculate_stats(x_positions)
+        z_stats = calculate_stats(z_positions)
 
         return jsonify({'x_stats': x_stats, 'z_stats': z_stats})
     except Exception as e:
         logging.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 
@@ -468,7 +450,7 @@ def dashboard():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM path_position_time_lists")
+        cursor.execute("SELECT id FROM movement_data")
         ids = cursor.fetchall()
         cursor.close()
         conn.close()
