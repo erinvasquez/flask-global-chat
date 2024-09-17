@@ -421,7 +421,7 @@ def get_statistics():
             if not positions:
                 return {'min': None, 'max': None, 'avg': None}
             return {
-                'min' min(positions),
+                'min': min(positions),
                 'max': max(positions),
                 'avg': sum(positions) / len(positions)
             }
