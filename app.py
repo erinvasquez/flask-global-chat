@@ -48,22 +48,54 @@ def receive_positiontimelist():
 
         # Extract data from the JSON payload
         data = request.get_json()
-        #positions = data.get('simplePositions')
-        #times = data.get('times')
-        path_data = data.get('path_data')
+
+        # Check if data is properly received and parsed
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid data format"}), 400
+        #
+        positions = data.get('simplePositions')
+        times = data.get('times')
+        is_turn = data.get('isTurn')
+        turn_angle = data.get('turnAngle')
         unique_code = data.get('uniqueCode')
 
+        if not all([positions, times, unique_code]):
+            return jsonify({"error": "Missing 'simplePositions', 'times', 'isTurn', 'turnAngle', or 'uniqueCode' in the request"}), 400
+
+        # Prepare path_data JSONB object
+        path_data = {
+            "positions": positions,
+            "times": times,
+            "isTurn": is_turn,
+            "turnAngle": turn_angle
+        }
+
+        #positions = data.get('simplePositions')
+        #times = data.get('times')
+        #path_data = data.get('path_data')
+        #unique_code = data.get('uniqueCode')
+
+        # Check if data is present
+        #if path_data is None or unique_code is None:
+        #    raise ValueError("Missing 'path_data' or 'uniqueCode' in the request")
+
+        # Extract positions and times
+        #positions = [item.get('position') for item in path_data]
+        #times = [item.get('time') for item in path_data]
+
+        # Log Data
+        #app.logger.info(f"Received path data: unique_code={unique_code}")
+
         # Log data
-        print(f"Received path data: unique_code={unique_code}")
+        #print(f"Received path data: unique_code={unique_code}")
 
         # Insert the data into the database
-        cursor.execute("INSERT INTO path_position_time_lists (path_positions, path_times, unique_code) VALUES (%s, %s, %s)",
-                        (json.dumps([item['position'] for item in path_data]),
-                        json.dumps([item['time'] for item in path_data]),
+        cursor.execute("INSERT INTO path_position_time_lists (path_data, unique_code) VALUES (%s, %s)",
+                        (json.dumps(path_data),
                         unique_code))
         conn.commit()
 
-        return jsonify({"message":"Path data received and stored successfully"}), 201
+        return jsonify({"message":"Movement data received and stored successfully"}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -135,7 +167,7 @@ def get_positiontimelist(id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Query to extract the enitre entry for the specific ID
+        # Query to extract the entire entry for the specific ID
         query = """
         SELECT id, path_positions, path_times
         FROM path_position_time_lists
@@ -145,20 +177,13 @@ def get_positiontimelist(id):
         # Execute query
         cursor.execute(query, (id,))
         result = cursor.fetchone()
-        cursor.close()
-        conn.close()
 
         if result:
-            #response = {
-            #    'id': result[0],
-            #    'path_positions': result[1],
-            #    'path_times': result[2]
-            #}
+            path_positions = json.loads(result[1])  # Deserialize path_positions
+            path_times = json.loads(result[2])      # Deserialize path_times
 
-            path_data = json.loads(result[1])
-            path_times = json.loads(result[2])
-
-            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_data, path_times)]
+            # Combine positions and times into path_data
+            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_positions, path_times)]
 
             response = {
                 'id': result[0],
@@ -168,9 +193,16 @@ def get_positiontimelist(id):
         else:
             return jsonify({'error': 'Entry not found'}), 404
     except Exception as e:
-        logging.error(f"Error fetching path position time list: {str(e)}")
-        logging.error(traceback.format_exc())
+        app.logger.error(f"Error fetching path position time list: {str(e)}")
+        app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 
 @app.route('/plot_xz_movement', methods=['POST'])
