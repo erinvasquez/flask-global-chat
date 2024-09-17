@@ -48,19 +48,22 @@ def receive_positiontimelist():
 
         # Extract data from the JSON payload
         data = request.get_json()
-        positions = data.get('simplePositions')
-        times = data.get('times')
+        #positions = data.get('simplePositions')
+        #times = data.get('times')
+        path_data = data.get('path_data')
         unique_code = data.get('uniqueCode')
 
         # Log data
-        print(f"Received leaderboard data: unique_code={unique_code}")
+        print(f"Received path data: unique_code={unique_code}")
 
         # Insert the data into the database
         cursor.execute("INSERT INTO path_position_time_lists (path_positions, path_times, unique_code) VALUES (%s, %s, %s)",
-                        (json.dumps(positions), json.dumps(times), unique_code))
+                        (json.dumps([item['position'] for item in path_data]),
+                        json.dumps([item['time'] for item in path_data]),
+                        unique_code))
         conn.commit()
 
-        return jsonify({"message":"PosTimeList received and stored successfully"}), 201
+        return jsonify({"message":"Path data received and stored successfully"}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -93,13 +96,24 @@ def get_path_position_time_lists():
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
+            #path_pos_time_list = {
+            #    "id": row[0],
+            #    "path_positions": row[1],
+            #    "path_times": row[2],
+            #    "created_at": row[3].isoformat() # Convert tiemstamp to ISO format string
+            #}
+            path_data = json.loads(row[1]) # Deserialize path_positions
+            path_times = json.loads(row[2]) # Deserialize path_times
+
+            # Combine positions and times into path_data
+            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_data, path_times)]
             path_pos_time_list = {
-                "id": row[0],
-                "path_positions": row[1],
-                "path_times": row[2],
-                "created_at": row[3].isoformat() # Convert tiemstamp to ISO format string
+               "id": row[0],
+               "path_data": combined_data,
+               "created_at": row[3].isoformat()
             }
             lists.append(path_pos_time_list)
+
 
         return jsonify({"path_position_time_lists": lists}), 200
 
@@ -135,10 +149,20 @@ def get_positiontimelist(id):
         conn.close()
 
         if result:
+            #response = {
+            #    'id': result[0],
+            #    'path_positions': result[1],
+            #    'path_times': result[2]
+            #}
+
+            path_data = json.loads(result[1])
+            path_times = json.loads(result[2])
+
+            combined_data = [{'position': pos, 'time': time} for pos, time in zip(path_data, path_times)]
+
             response = {
                 'id': result[0],
-                'path_positions': result[1],
-                'path_times': result[2]
+                'path_data': combined_data
             }
             return jsonify(response)
         else:
