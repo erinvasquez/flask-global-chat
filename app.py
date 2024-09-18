@@ -108,10 +108,10 @@ def get_path_position_time_lists():
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
-            path_data = row[0]
-            unique_code = row[1] # Assuming unique_code in in the third column
-            created_at = row[2]
-            id = row[3]
+            #id = row[0]
+            path_data = row[1]
+            unique_code = row[2]
+            created_at = row[3]
 
             if isinstance(created_at, datetime):
                 created_at = created_at.isoformat()
@@ -123,8 +123,8 @@ def get_path_position_time_lists():
             movement_data = {
                "path_data": path_data,
                "unique_code": unique_code,
-               "created_at": created_at,
-               "id": id
+               "created_at": created_at #,
+               #"id": id
             }
             lists.append(movement_data)
 
@@ -170,12 +170,15 @@ def get_positiontimelist(id):
                 'unique_code': unique_code,
                 'created_at': created_at
             }
+
             return jsonify(response)
         else:
             return jsonify({'error': 'Entry not found'}), 404
+
     except Exception as e:
         app.logger.error(f"Error fetching movement data: {str(e)}")
         app.logger.error(traceback.format_exc())
+
         return jsonify({'error': 'Internal server error'}), 500
 
     finally:
