@@ -10,6 +10,8 @@ import base64
 from io import BytesIO
 import os
 import random
+import datetime
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -59,7 +61,7 @@ def receive_positiontimelist():
         turn_angle = data.get('turnAngle', None) # Provide default value if not present
         unique_code = data.get('uniqueCode')
 
-        if not all([positions, times, unique_code]):
+        if not all([simple_positions, times, unique_code]):
             return jsonify({"error": "Missing 'simplePositions', 'times', 'isTurn', 'turnAngle', or 'uniqueCode' in the request"}), 400
 
         # Prepare path_data JSONB object
@@ -100,21 +102,29 @@ def get_path_position_time_lists():
         cursor = conn.cursor()
 
         # Fetch all rows from the table
-        cursor.execute("SELECT * FROM path_position_time_lists")
+        cursor.execute("SELECT * FROM movement_data")
         rows = cursor.fetchall()
 
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
-            path_data = json.loads(row[1]) # Deserialize path_data
-            unique_code = row[2] # Assuming unique_code in in the third column
-            created_at = row[3].isoformat()
+            path_data = row[0]
+            unique_code = row[1] # Assuming unique_code in in the third column
+            created_at = row[2]
+            id = row[3]
+
+            if isinstance(created_at, datetime):
+                created_at = created_at.isoformat()
+            elif isinstance(created_at, str):
+                created_at = datetime.fromisoformat(created_at).isoformat()
+            else:
+                created_at = None
 
             movement_data = {
-               "id": row[0],
                "path_data": path_data,
                "unique_code": unique_code,
-               "created_at": created_at
+               "created_at": created_at,
+               "id": id
             }
             lists.append(movement_data)
 
@@ -151,7 +161,7 @@ def get_positiontimelist(id):
         result = cursor.fetchone()
 
         if result:
-            path_data = json.loads(result[0])
+            path_data = result[0]
             unique_code = result[1]
             created_at = result[2].isoformat() if result[2] else None
 
@@ -410,7 +420,7 @@ def get_statistics():
 
         # Extract X and Z positions from the path_positions
         for row in rows:
-            path_data = json.loads(row[0])
+            path_data = row[0]
             positions = path_data.get('positions', [])
             for pos in positions:
                 x_positions.append(pos['x'])
