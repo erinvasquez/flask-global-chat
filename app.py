@@ -12,8 +12,13 @@ import os
 import random
 import datetime
 from datetime import datetime
+import requests
+import subprocess
 
 app = Flask(__name__)
+
+# API LLM Query Route
+OLLAMA_HOST = "https://6231-35-204-114-104.ngrok-free.app/" # Taken from COLAB jupyter notebook run
 
 # PostgreSQL connection configuration
 DB_NAME = 'leveltimes'
@@ -57,8 +62,8 @@ def receive_positiontimelist():
         #
         simple_positions = data.get('simplePositions')
         times = data.get('times')
-        is_turn = data.get('isTurn', None) # Provide default value if not present
-        turn_angle = data.get('turnAngle', None) # Provide default value if not present
+        is_turn = data.get('isTurn', []) # Provide default value if not present
+        turn_angle = data.get('turnAngle', []) # Provide default value if not present
         unique_code = data.get('uniqueCode')
 
         if not all([simple_positions, times, unique_code]):
@@ -92,7 +97,7 @@ def receive_positiontimelist():
 
 
 @app.route('/get_positiontimelist', methods=['GET'])
-def get_path_position_time_lists():
+def get_positiontimelists():
     conn = None
     cursor = None
 
@@ -105,6 +110,8 @@ def get_path_position_time_lists():
         cursor.execute("SELECT * FROM movement_data")
         rows = cursor.fetchall()
 
+        #print("Fetched rows: ", rows);
+
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
@@ -112,6 +119,12 @@ def get_path_position_time_lists():
             path_data = row[1]
             unique_code = row[2]
             created_at = row[3]
+
+            positions = path_data.get('positions', [])
+            times = path_data.get('times', [])
+            is_turn = path_data.get('isTurn', [])
+            turn_angle = path_data.get('turnAngle', [])
+
 
             if isinstance(created_at, datetime):
                 created_at = created_at.isoformat()
@@ -121,15 +134,21 @@ def get_path_position_time_lists():
                 created_at = None
 
             movement_data = {
-               "path_data": path_data,
-               "unique_code": unique_code,
-               "created_at": created_at #,
-               #"id": id
+               "path_data": {
+                   "positions": positions,
+                   "times": times,
+                   "isTurn": is_turn,
+                   "turnAngle": turn_angle
+               },
+               "unique_code": unique_code #,
+               #"created_at": created_at
             }
             lists.append(movement_data)
 
+            #print("Movement data List: ", lists)
 
-        return jsonify({"movement_data": lists}), 200
+
+        return jsonify({"movement list data": lists}), 200
 
     except Exception as e:
         error_message = f"Error: {str(e)}\n{traceback.format_exc()}"
@@ -163,12 +182,12 @@ def get_positiontimelist(id):
         if result:
             path_data = result[0]
             unique_code = result[1]
-            created_at = result[2].isoformat() if result[2] else None
+            #created_at = result[3].isoformat() if result[2] else None
 
             response = {
                 'path_data': path_data,
-                'unique_code': unique_code,
-                'created_at': created_at
+                'unique_code': unique_code #,
+                #'created_at': created_at
             }
 
             return jsonify(response)
@@ -481,6 +500,48 @@ def dashboard():
         app.logger.error(f"Error loading dashboard: {str(e)}")
         app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
+
+
+# LLM Routes
+def pull_model(model_name):
+    headers = {"Content-Type": "application/json"}
+    payload = {"model": model_name}
+
+    # Make a request to pull the model
+    response = requests.post(f"{OLLAMA_HOST}/api/models/pull", json=payload, headers=headers)
+
+    if response.status_code == 200:
+        print(f"Model {model_name} pulled successfully.")
+        return True
+    else:
+        print(f"Failed to pull model {model_name}: {response.status_code}, {response.text}")
+        return False
+
+# Pull the model when the app starts
+model_name = "mistral"
+#model_pulled = pull_model(model_name)
+
+@app.route('/query_llm', methods=['POST'])
+def query_llm():
+    try:
+        user_input = request.json.get('input', '')
+        if not user_input:
+            return jsonify({"error": "No input provided"}), 400
+
+        # Prepare the command to run Mistral
+        command = ['ollama', 'run', model_name, user_input]
+        result = subprocess.run(command, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            response_output = result.stdout.strip()
+            return jsonify({"response": response_output}), 200
+        else:
+            logging.error(f"LLM query failed with return code {result.returncode}: {result.stderr}")
+            return jsonify({"error": "LLM query failed"}), 500
+    except Exception as e:
+        logging.error(f"Error querying LLM: {str(e)}")
+        return jsonify({"error": "An error occurred"}), 500
+
 
 
 if __name__ == '__main__':

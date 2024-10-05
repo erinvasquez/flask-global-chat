@@ -51,6 +51,26 @@
                     <div id="stats">
                     </div>
                 </div>
+                
+                <!-- User input for LLM -->
+                <div class="llm-container">
+                    <h2>Ask the LLM</h2>
+                    <form id="llmForm">
+                        <label for="userInput">Enter your question:</label>
+                        <textarea id="userInput" name="input" rows="4" cols="50"></textarea>
+                        <button type="submit">Ask</button>
+                    </form>
+                    <div id="llmResponse">
+                        <h2>LLM Response</h2>
+                        <p id="responseText"></p>
+                    </div>
+                </div>
+
+                <!-- Page Summary -->
+                <div class="summary-container">
+                    <h2>Page Summary</h2>
+                    <p id="pageSummary"></p>
+                </div>
             </div>
         </main>
     </div>

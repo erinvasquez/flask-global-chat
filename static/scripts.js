@@ -119,3 +119,61 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    const llmForm = document.getElementById('llmForm');
+    const responseText = document.getElementById('responseText');
+    const pageSummary = document.getElementById('pageSummary'); // Make sure this exists in your HTML
+
+    // Handle form submission for the LLM input
+    llmForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const userInput = document.getElementById('userInput').value;
+        responseText.textContent = 'Loading...'; // Show loading text
+
+        try {
+            const response = await fetch('/query_llm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: userInput })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                responseText.textContent = result.response; // Display AI's answer
+            } else {
+                responseText.textContent = `Error: ${result.error || 'Something went wrong'}`;
+            }
+        } catch (error) {
+            responseText.textContent = 'Network error: Unable to query the LLM';
+        }
+    });
+
+    // Send a request to get the page summary from the LLM
+    async function getPageSummary() {
+        const pageContent = document.body.innerText;  // Send the page content as a string
+        try {
+            const response = await fetch('/query_llm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: `Summarize the following page: ${pageContent}` })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                pageSummary.textContent = result.response;
+            } else {
+                pageSummary.textContent = `Error: ${result.error || 'Something went wrong'}`;
+            }
+        } catch (error) {
+            pageSummary.textContent = 'Network error: Unable to fetch page summary';
+        }
+    }
+
+    // Call the function to get the page summary on page load
+    getPageSummary();
+});
