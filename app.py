@@ -59,23 +59,13 @@ def receive_positiontimelist():
         # Check if data is properly received and parsed
         if not isinstance(data, dict):
             return jsonify({"error": "Invalid data format"}), 400
-        #
-        simple_positions = data.get('simplePositions')
-        times = data.get('times')
-        is_turn = data.get('isTurn', []) # Provide default value if not present
-        turn_angle = data.get('turnAngle', []) # Provide default value if not present
+
+        # Extract the path_data and unique_code
+        path_data = data.get('path_data')
         unique_code = data.get('uniqueCode')
 
-        if not all([simple_positions, times, unique_code]):
-            return jsonify({"error": "Missing 'simplePositions', 'times', 'isTurn', 'turnAngle', or 'uniqueCode' in the request"}), 400
-
-        # Prepare path_data JSONB object
-        path_data = {
-            "positions": simple_positions,
-            "times": times,
-            "isTurn": is_turn,
-            "turnAngle": turn_angle
-        }
+        if not path_data or not unique_code:
+            return jsonify({"error": "Missing 'path_data' or 'uniqueCode' in the request"}), 400
 
         # Insert the data into the database
         cursor.execute("INSERT INTO movement_data (path_data, unique_code) VALUES (%s, %s)",
@@ -115,16 +105,10 @@ def get_positiontimelists():
         # Convert the rows to a list of dictionaries
         lists = []
         for row in rows:
-            #id = row[0]
+            id = row[0]
             path_data = row[1]
             unique_code = row[2]
             created_at = row[3]
-
-            positions = path_data.get('positions', [])
-            times = path_data.get('times', [])
-            is_turn = path_data.get('isTurn', [])
-            turn_angle = path_data.get('turnAngle', [])
-
 
             if isinstance(created_at, datetime):
                 created_at = created_at.isoformat()
@@ -134,19 +118,11 @@ def get_positiontimelists():
                 created_at = None
 
             movement_data = {
-               "path_data": {
-                   "positions": positions,
-                   "times": times,
-                   "isTurn": is_turn,
-                   "turnAngle": turn_angle
-               },
-               "unique_code": unique_code #,
-               #"created_at": created_at
+               "path_data": path_data,
+               "unique_code": unique_code,
+               "created_at": created_at
             }
             lists.append(movement_data)
-
-            #print("Movement data List: ", lists)
-
 
         return jsonify({"movement list data": lists}), 200
 
@@ -168,26 +144,22 @@ def get_positiontimelist(id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Query to extract the entire entry for the specific ID
-        query = """
-        SELECT  path_data, unique_code, created_at
-        FROM movement_data
-        WHERE id = %s
-        """
-
-        # Execute query
-        cursor.execute(query, (id,))
+        cursor.execute("""
+            SELECT path_data, unique_code, created_at
+            FROM movement_data
+            WHERE id = %s
+        """, (id,))
         result = cursor.fetchone()
 
         if result:
-            path_data = result[0]
-            unique_code = result[1]
-            #created_at = result[3].isoformat() if result[2] else None
+            path_data, unique_code, created_at = result
+
+            created_at_iso = created_at.isoformat() if created_at else None
 
             response = {
                 'path_data': path_data,
-                'unique_code': unique_code #,
-                #'created_at': created_at
+                'unique_code': unique_code,
+                'created_at': created_at_iso
             }
 
             return jsonify(response)
@@ -197,7 +169,6 @@ def get_positiontimelist(id):
     except Exception as e:
         app.logger.error(f"Error fetching movement data: {str(e)}")
         app.logger.error(traceback.format_exc())
-
         return jsonify({'error': 'Internal server error'}), 500
 
     finally:
@@ -206,41 +177,35 @@ def get_positiontimelist(id):
         if conn:
             conn.close()
 
-
-
 @app.route('/plot_xz_movement', methods=['POST'])
 def plot_xz_movement():
     id = request.form['id']
 
     if not id:
-        return jsonify({'error': 'ID not prvoided'}), 400
+        return jsonify({'error': 'ID not provided'}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        query = """
-        SELECT path_data
-        FROM movement_data
-        WHERE id = %s
-        """
-
-        cursor.execute(query, (id,))
+        cursor.execute("""
+            SELECT path_data
+            FROM movement_data
+            WHERE id = %s
+        """, (id,))
         result = cursor.fetchone()
-        cursor.close()
-        conn.close()
 
         if result:
-            path_data = json.loads(result[0])
-            simple_positions = path_data.get('positions', [])
+            path_data = result[0]  # This is already a JSON object
+            positions = path_data.get('positions', [])
 
-            # Verify data type and structure
-            if not isinstance(simple_positions, list) or not all(isinstance(pos, dict) and 'x' in pos and 'z' in pos for pos in simple_positions):
+            # Verify data structure
+            if not isinstance(positions, list) or not all(isinstance(pos, dict) and 'x' in pos and 'z' in pos for pos in positions):
                 return jsonify({'error': 'Invalid format for positions in path_data'}), 500
 
             # Extract x, z positions
-            x_positions = [pos['x'] for pos in simple_positions]
-            z_positions = [pos['z'] for pos in simple_positions]
+            x_positions = [pos['x'] for pos in positions]
+            z_positions = [pos['z'] for pos in positions]
 
             # Create the XZ plot
             plt.figure(figsize=(10, 6))
@@ -266,16 +231,16 @@ def plot_xz_movement():
             # Generate heatmap of all entries
             conn = get_db_connection()
             cursor = conn.cursor()
+
+            # Update heatmap generation
             cursor.execute("SELECT path_data FROM movement_data")
-            all_path_positions = cursor.fetchall()
-            cursor.close()
-            conn.close()
+            all_path_data = cursor.fetchall()
 
             # Flatten and prepare data for heatmap
             all_x_positions = []
             all_z_positions = []
-            for positions in all_path_data:
-                path_data = json.loads(data[0])
+            for data in all_path_data:
+                path_data = data[0]  # This is already a JSON object
                 positions = path_data.get('positions', [])
                 if isinstance(positions, list):
                     all_x_positions.extend(pos['x'] for pos in positions if 'x' in pos)
@@ -423,30 +388,25 @@ def generate_and_verify_unique_code(table):
 
 
 # Statistics
-
 @app.route('/get_statistics', methods=['GET'])
 def get_statistics():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Query to get all X and Z positions
-        cursor.execute('''
-            SELECT path_data
-            FROM movement_data
-        ''')
+        cursor.execute('SELECT path_data FROM movement_data')
         rows = cursor.fetchall()
 
         x_positions = []
         z_positions = []
 
-        # Extract X and Z positions from the path_positions
         for row in rows:
-            path_data = row[0]
+            path_data = row[0]  # This is already a JSON object
             positions = path_data.get('positions', [])
             for pos in positions:
-                x_positions.append(pos['x'])
-                z_positions.append(pos['z'])
+                if isinstance(pos, dict) and 'x' in pos and 'z' in pos:
+                    x_positions.append(pos['x'])
+                    z_positions.append(pos['z'])
 
         # Calculate statistics
         def calc_stats(positions):
