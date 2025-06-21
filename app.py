@@ -15,11 +15,9 @@ from datetime import datetime
 import requests
 import subprocess
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
-# API LLM Query Route
-OLLAMA_HOST = "https://6231-35-204-114-104.ngrok-free.app/" # Taken from COLAB jupyter notebook run
-
+## UPDATE FOR GCP
 # PostgreSQL connection configuration
 DB_NAME = 'leveltimes'
 DB_USER = 'fresnousers'
@@ -36,11 +34,27 @@ def get_db_connection():
         port=DB_PORT
     )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Setting up logging
 #logging.basicConfig(filename='/home/erin_vasquez/flask-global-chat/logs/app.log', level=logging.DEBUG)
 handler = logging.FileHandler('logs/app.log')
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
+
+
 
 # Path Position Time List endpoints
 @app.route('/receive_positiontimelist', methods=['POST'])
@@ -84,6 +98,8 @@ def receive_positiontimelist():
             cursor.close()
         if conn:
             conn.close()
+
+
 
 
 @app.route('/get_positiontimelist', methods=['GET'])
@@ -138,6 +154,8 @@ def get_positiontimelists():
         if conn:
             conn.close()
 
+
+
 @app.route('/get_positiontimelist/<int:id>', methods=['GET'])
 def get_positiontimelist(id):
     try:
@@ -176,6 +194,8 @@ def get_positiontimelist(id):
             cursor.close()
         if conn:
             conn.close()
+
+
 
 @app.route('/plot_xz_movement', methods=['POST'])
 def plot_xz_movement():
@@ -279,6 +299,10 @@ def plot_xz_movement():
         logging.error(f"Error plotting XZ movement: {str(e)}")
         logging.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
+
+
+
+
 
 @app.route('/plot_xz_movement', methods=['GET'])
 def plot_xz_movement_ui():
@@ -503,8 +527,10 @@ def query_llm():
         return jsonify({"error": "An error occurred"}), 500
 
 
+# Cloud Run health check route
+@app.route('/healthz')
+def health_check():
+    return 'OK', 200
 
 if __name__ == '__main__':
-    fullchain_path = '/etc/letsencrypt/live/silenttableshow.com/fullchain.pem'
-    privkey_path = '/etc/letsencrypt/live/silenttableshow.com/privkey.pem'
     app.run()
