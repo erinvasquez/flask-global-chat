@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, render_template, send_file
 from dotenv import load_dotenv
-load_dotenv()
 
 import psycopg2
 import logging
@@ -20,6 +19,10 @@ import subprocess
 
 app = Flask(__name__, static_folder='static')
 
+
+# Load environment variables from .env
+load_dotenv()
+print("Connecting to DB with:", os.environ.get("DB_NAME"), os.environ.get("DB_HOST")) #only for development, not in production
 
 
 
