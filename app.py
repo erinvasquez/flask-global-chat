@@ -1,4 +1,7 @@
 from flask import Flask, request, jsonify, render_template, send_file
+from dotenv import load_dotenv
+load_dotenv()
+
 import psycopg2
 import logging
 import json

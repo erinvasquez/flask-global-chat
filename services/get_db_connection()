@@ -1,13 +1,5 @@
 import psycopg2
 
-#TODO: UPDATE FOR GCP
-# PostgreSQL connection configuration
-#DB_NAME = 'leveltimes'
-#DB_USER = 'fresnousers'
-#DB_PASSWORD = 'maze'
-#DB_HOST = 'localhost'
-#DB_PORT = '5432'
-
 
 
 def get_db_connection():
