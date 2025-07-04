@@ -30,10 +30,16 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM movement_data")
-        ids = cursor.fetchall()
+        # TODO: update for GCP
+        # Skip DB connection for now
+        # conn = get_db_connection()
+        # cursor = conn.cursor()
+        # cursor.execute("SELECT id FROM movement_data")
+        # ids = cursor.fetchall()
+        
+        # Fake data for now
+        ids = [(1.), (2,), (3,)]
+
         cursor.close()
         conn.close()
 

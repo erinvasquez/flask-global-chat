@@ -1,19 +1,20 @@
-## UPDATE FOR GCP
-# PostgreSQL connection configuration
-DB_NAME = 'leveltimes'
-DB_USER = 'fresnousers'
-DB_PASSWORD = 'maze'
-DB_HOST = 'localhost'
-DB_PORT = '5432'
+import psycopg2
 
+#TODO: UPDATE FOR GCP
+# PostgreSQL connection configuration
+#DB_NAME = 'leveltimes'
+#DB_USER = 'fresnousers'
+#DB_PASSWORD = 'maze'
+#DB_HOST = 'localhost'
+#DB_PORT = '5432'
 
 
 
 def get_db_connection():
     return psycopg2.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        host=DB_HOST,
-        port=DB_PORT
+        dbname=os.environ.get("DB_NAME"),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        host=os.environ.get("DB_HOST"),
+        port=os.environ.get("DB_PORT", 5432)
     )
