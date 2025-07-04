@@ -20,4 +20,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir -r requirements.txt
 
 ENV PORT=8080
-CMD ["sh", "-c", "gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 wsgi:app"]
+
+# Local testing only, cloud run $port must come from the environment
+#CMD ["sh", "-c", "gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 wsgi:app"]
+# Changing from JSOn array to string (shell form)
+CMD gunicorn --bind ":${PORT}" --workers 1 --threads 8 --timeout 0 wsgi:app
