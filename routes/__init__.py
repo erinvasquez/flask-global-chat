@@ -1,3 +1,5 @@
+# blueprints to keep our code separated
+
 from .api_routes import api_bp
 from .db_routes import db_bp
 from .plots import plots_bp

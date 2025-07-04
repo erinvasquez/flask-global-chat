@@ -1,7 +1,3 @@
-# /query_llm
-
-
-
 # Unique code generation
 adjectives = ["Brave", "Recusant", "Vigilant", "Swift", "Bold"]
 nouns = ["Panda", "Eagle", "Tiger", "Wolf", "Hawk"]
