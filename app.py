@@ -62,3 +62,17 @@ def health_check():
 
 if __name__ == '__main__':
     app.run()
+
+
+
+@app.route('/test-db')
+def test_db():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1;")
+        cursor.close()
+        conn.close()
+        return "Database connection successful!", 200
+    except Exception as e:
+        return f"Database connection failed: {e}", 500
