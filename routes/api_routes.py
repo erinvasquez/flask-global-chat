@@ -1,8 +1,18 @@
+# routes/api_routes.py
+
+
+# Flask blueprint
+from flask import Blueprint, jsonify
+api_bp = Blueprint('api', __name__)
+
+
+
+
 # Unique code generation
 adjectives = ["Brave", "Recusant", "Vigilant", "Swift", "Bold"]
 nouns = ["Panda", "Eagle", "Tiger", "Wolf", "Hawk"]
 
-@app.route('/generate_unique_code', methods=['GET'])
+@api_bp.route('/generate_unique_code', methods=['GET'])
 def generate_unique_code_endpoint():
     try:
         unique_code = generate_and_verify_unique_code('leaderboard')
