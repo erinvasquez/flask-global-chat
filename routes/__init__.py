@@ -1,8 +1,10 @@
 # blueprints to keep our code separated
 
-from .api_routes import api_bp
-from .db_routes import db_bp
-from .plots import plots_bp
+from routes.api_routes import api_bp
+from routes.db_routes import db_bp
+from routes.plots import plots_bp
+from routes.get_db_connection import get_db_connection
+
 
 
 def register_routes(app):
