@@ -16,7 +16,13 @@ from datetime import datetime
 import requests
 import subprocess
 
+from .get_db_connection import get_db_connection, register_routes
+
+
 app = Flask(__name__, static_folder='static')
+register_routes(app)
+
+
 
 
 
