@@ -16,10 +16,11 @@ from datetime import datetime
 import requests
 import subprocess
 
-from routes.get_db_connection import get_db_connection, register_routes
-
+from routes import register_routes
 
 app = Flask(__name__, static_folder='static')
+
+# Register all of our blueprints
 register_routes(app)
 
 
